@@ -482,7 +482,7 @@ best_accuracy <- rf_grid_result %>%
   select_best(metric = "accuracy")
 
 best_accuracy
-
+#bc we used quantiles to make the classes, we have balanced classes. So, our data is equally spaced. Cannot use accuracy for unbalanced data.
 ```
 mtry: 35  
 trees: 149  
@@ -492,7 +492,7 @@ Now, let's select best based on roc-auc (higher is better):
 ```{r}
 # Based on highest roc_auc
 best_roc <- rf_grid_result %>%
-  select_best()
+  select_best(metric = "roc_auc")
 
 best_roc
 
@@ -518,7 +518,7 @@ final_spec <- rand_forest(trees = best_accuracy$trees,
              importance = "permutation"
              ) %>%
     # Specifying mode  
-  set_mode()
+  set_mode("classification")
   
 
 final_spec
