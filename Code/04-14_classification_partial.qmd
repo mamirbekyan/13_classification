@@ -534,46 +534,54 @@ This means 2 things:
 These 2 steps can be completed in one function, as below:  
 
 ```{r final_fit}
-final_fit <- last_fit(final_spec,
+final_fit <- last_fit(final_spec, #this function takes your best hyperparameter values and now runs them on the entire training set. In training, we did training on separate folds. Up until this point, we have only used folds, not the entire dataset. 
                 weather_recipe,
                 split = weather_split)
 
 final_fit %>%
-  collect_predictions()
+  collect_predictions() #211 is the test set, thats why there are 211 rows
+
+#shows the probabilities that lead to the classification in the .pred_class column. The model does not predict correctly all the time. How can we check, without RMSE and R2 (which are for numerical variables)
 ```
 
 ### Test set  
 Confusion matrix on **test set**:  
 ```{r}
-
-  
+final_fit %>%
+  collect_predictions() %>%
+  conf_mat(truth = strength_gtex_class, #what our actual classes were
+           estimate = .pred_class) %>% #what the model predicted
+  autoplot(type = "heatmap") #all of the values in the matrix add up to 211. Majority of the observations should be on the diagonal.
 ```
 
 Metrics on the **test set**:
 ```{r}
-
+final_fit %>%
+  collect_metrics()  #accuracy is 0.49. roc_auc the higher to one is better. Brier class the lower the better.
 ```
 Let's hand-calculate accuracy:  
+That's how many rows the model got right divided by all observations
 ```{r}
 #  Numerator: number of correctly classified (the diagonal)
-numerator 
+numerator <- 41+33+31
 
 # Denominator: number of all observations  
-denominator 
+denominator <- 24+6+17+20+13+26+41+33+31
 
+numerator/denominator
 ```
 
 Let's plot ROC on **test set**:  
 ```{r}
 final_fit %>%
   collect_predictions(parameters = best_roc) %>% 
-  roc_curve(strength_gtex_class, 
+  roc_curve(strength_gtex_class, #providing observed values probabilities
             .pred_Low,
             .pred_Medium,
             .pred_High) %>%
-ggplot(aes(x = ..., 
-           y = ..., 
-           color = ...)) +
+ggplot(aes(x = 1 - specificity, 
+           y = sensitivity, 
+           color = .level)) +
   geom_line(size = 1.2) +
   geom_abline(linetype = "dashed") +
   coord_equal() +
@@ -584,7 +592,7 @@ ggplot(aes(x = ...,
   ) +
   theme_minimal(base_size = 14)
 
-  
+  #The model is doing better than random for our test set, but doing the best for the "Low" class
 ```
 
 
@@ -600,8 +608,10 @@ final_spec %>%
                           weather_train)) %>%
   conf_mat(truth = strength_gtex_class,
            estimate = .pred_class
-          )
+          ) %>%
+  autoplot(type = "heatmap")
   
+#can report on this data, but don't want to use this to see how good our model works
 ```
 
 
@@ -612,7 +622,9 @@ final_spec %>%
       data = bake(weather_prep, 
                   weather_train)) %>%
   augment(new_data = bake(weather_prep, 
-                          weather_train)) 
+                          weather_train)) %>%
+  accuracy(truth = strength_gtex_class,
+           estimate = .pred_class)
 
 ```
 How does metrics on test compare to metrics on train?  
@@ -658,7 +670,7 @@ The variables with the **largest average decrease in accuracy** are considered *
 
 ```{r}
 final_spec %>%
-  fit(... ~ .,
+  fit(strength_gtex_class ~ .,
          data = bake(weather_prep, 
                      weather_train)) %>%
     vi() %>%
